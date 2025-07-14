@@ -1,59 +1,102 @@
-# # Install required package (do this manually in terminal first if not already installed)
-# # pip install transformers
+# #WORKING FLASK BACKEND
+# from flask import Flask, request, jsonify
+# from flask_cors import CORS
+# from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+# import torch
+# from spellchecker import SpellChecker
+# spell = SpellChecker()
 
-# from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+# app = Flask(__name__)
+# CORS(app)  # Enables CORS for all routes
 
-# # Load the grammar correction model
+# # Load the grammar correction model and tokenizer
 # model_name = "prithivida/grammar_error_correcter_v1"
 # tokenizer = AutoTokenizer.from_pretrained(model_name)
 # model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
 
-# # Input sentence with grammar errors
-# incorrect_text = "She no went to the market."
+# @app.route('/correct', methods=['POST'])
+# def correct_text():
+#     data = request.get_json()
+#     if not data or 'text' not in data:
+#         return jsonify({"error": "Missing 'text' field"}), 400
 
-# # Tokenize and encode the sentence
-# input_ids = tokenizer.encode(incorrect_text, return_tensors="pt")
+#     prompt = f"gec: {data['text']}"
+#     input_ids = tokenizer.encode(prompt, return_tensors="pt")
 
-# # Generate corrected sentence
-# outputs = model.generate(input_ids, max_length=128, num_beams=5, early_stopping=True)
+#     with torch.no_grad():
+#         output = model.generate(input_ids, max_length=128)
 
-# # Decode the output
-# corrected_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+#     corrected = tokenizer.decode(output[0], skip_special_tokens=True)
+#     return jsonify({"corrected": corrected})
+# @app.route('/spellcheck', methods=['POST'])
+# def spellcheck_word():
+#     try:
+#         data = request.get_json()
+#         if not data or 'word' not in data:
+#             return jsonify({"error": "Missing 'word' field"}), 400
 
-# # Print results
-# print("🔸 Original sentence:", incorrect_text)
-# print("✅ Corrected sentence:", corrected_text)
+#         word = data['word']
+        
+#         # Check if the word is misspelled
+#         misspelled = spell.unknown([word])
+#         if not misspelled:
+#             return jsonify({"suggestions": []})
 
-#WORKING FLASK BACKEND
+#         # Get corrections (limit to 5 suggestions)
+#         suggestions = spell.candidates(word)
+#         suggestions = [str(s) for s in suggestions][:5]
+
+#         return jsonify({"suggestions": suggestions})
+
+#     except Exception as e:
+#         print("Spellcheck Error:", e)
+#         return jsonify({"error": "Internal server error"}),
+# if __name__ == '__main__':
+#     app.run(port=8001)
+
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
-import torch
 from spellchecker import SpellChecker
-spell = SpellChecker()
 
 app = Flask(__name__)
-CORS(app)  # Enables CORS for all routes
+CORS(app)
 
-# Load the grammar correction model and tokenizer
-model_name = "prithivida/grammar_error_correcter_v1"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+spell = SpellChecker()
+
+# Cache variables for lazy loading
+model = None
+tokenizer = None
 
 @app.route('/correct', methods=['POST'])
 def correct_text():
-    data = request.get_json()
-    if not data or 'text' not in data:
-        return jsonify({"error": "Missing 'text' field"}), 400
+    global model, tokenizer
+    try:
+        from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+        import torch
 
-    prompt = f"gec: {data['text']}"
-    input_ids = tokenizer.encode(prompt, return_tensors="pt")
+        if not model or not tokenizer:
+            model_name = "prithivida/grammar_error_correcter_v1"
+            tokenizer = AutoTokenizer.from_pretrained(model_name)
+            model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
 
-    with torch.no_grad():
-        output = model.generate(input_ids, max_length=128)
+        data = request.get_json()
+        if not data or 'text' not in data:
+            return jsonify({"error": "Missing 'text' field"}), 400
 
-    corrected = tokenizer.decode(output[0], skip_special_tokens=True)
-    return jsonify({"corrected": corrected})
+        prompt = f"gec: {data['text']}"
+        input_ids = tokenizer.encode(prompt, return_tensors="pt")
+
+        with torch.no_grad():
+            output = model.generate(input_ids, max_length=128)
+
+        corrected = tokenizer.decode(output[0], skip_special_tokens=True)
+        return jsonify({"corrected": corrected})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/spellcheck', methods=['POST'])
 def spellcheck_word():
     try:
@@ -62,20 +105,19 @@ def spellcheck_word():
             return jsonify({"error": "Missing 'word' field"}), 400
 
         word = data['word']
-        
-        # Check if the word is misspelled
         misspelled = spell.unknown([word])
         if not misspelled:
             return jsonify({"suggestions": []})
 
-        # Get corrections (limit to 5 suggestions)
-        suggestions = spell.candidates(word)
-        suggestions = [str(s) for s in suggestions][:5]
-
+        suggestions = list(spell.candidates(word))[:5]
         return jsonify({"suggestions": suggestions})
 
     except Exception as e:
-        print("Spellcheck Error:", e)
-        return jsonify({"error": "Internal server error"}),
+        return jsonify({"error": "Internal server error"}), 500
+
+
 if __name__ == '__main__':
-    app.run(port=8001)
+    import os
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host='0.0.0.0', port=port)
+
