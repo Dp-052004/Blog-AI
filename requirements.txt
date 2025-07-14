@@ -1,5 +1,5 @@
 flask
-transformers
-torch
+transformers==4.21.1
+torch==1.12.1
 pyspellchecker
 flask-cors
