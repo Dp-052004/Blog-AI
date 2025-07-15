@@ -83,6 +83,39 @@ if hf_token:
 model = None
 tokenizer = None
 
+# @app.route('/correct', methods=['POST'])
+# def correct_text():
+#     global model, tokenizer
+#     try:
+#         from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+#         import torch
+
+#         if model is None or tokenizer is None:
+#             model_name = "prithivida/grammar_error_correcter_v1"
+#             tokenizer = AutoTokenizer.from_pretrained(
+#                 model_name,
+#                 use_auth_token=hf_token  # ✅ pass token here
+#             )
+#             model = AutoModelForSeq2SeqLM.from_pretrained(
+#                 model_name,
+#                 use_auth_token=hf_token  # ✅ pass token here
+#             )
+
+#         data = request.get_json()
+#         if not data or 'text' not in data:
+#             return jsonify({"error": "Missing 'text' field"}), 400
+
+#         prompt = f"gec: {data['text']}"
+#         input_ids = tokenizer.encode(prompt, return_tensors="pt")
+
+#         with torch.no_grad():
+#             output = model.generate(input_ids, max_length=128)
+
+#         corrected = tokenizer.decode(output[0], skip_special_tokens=True)
+#         return jsonify({"corrected": corrected})
+
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
 @app.route('/correct', methods=['POST'])
 def correct_text():
     global model, tokenizer
@@ -91,21 +124,15 @@ def correct_text():
         import torch
 
         if model is None or tokenizer is None:
-            model_name = "prithivida/grammar_error_correcter_v1"
-            tokenizer = AutoTokenizer.from_pretrained(
-                model_name,
-                use_auth_token=hf_token  # ✅ pass token here
-            )
-            model = AutoModelForSeq2SeqLM.from_pretrained(
-                model_name,
-                use_auth_token=hf_token  # ✅ pass token here
-            )
+            model_name = "vennify/t5-base-grammar-correction"
+            tokenizer = AutoTokenizer.from_pretrained(model_name)
+            model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
 
         data = request.get_json()
         if not data or 'text' not in data:
             return jsonify({"error": "Missing 'text' field"}), 400
 
-        prompt = f"gec: {data['text']}"
+        prompt = f"grammar: {data['text']}"
         input_ids = tokenizer.encode(prompt, return_tensors="pt")
 
         with torch.no_grad():
