@@ -6,3 +6,4 @@ huggingface_hub==0.20.3
 flask==2.3.2
 flask-cors==4.0.0
 pyspellchecker==0.7.0
+gunicorn==21.2.0
