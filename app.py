@@ -65,7 +65,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from spellchecker import SpellChecker
 
-# ✅ NEW: import login + os
+# ✅ For token login
 import os
 from huggingface_hub import login
 
@@ -74,11 +74,10 @@ CORS(app)
 
 spell = SpellChecker()
 
-# 🔑‑‑‑‑‑ Hugging Face token login (runs once at startup) ‑‑‑‑‑🔑
-hf_token = os.getenv("HF_TOKEN")          # Railway Variable → HF_TOKEN
+# ✅ Login to Hugging Face with token from Railway env variable
+hf_token = os.getenv("HF_TOKEN")
 if hf_token:
-    login(token=hf_token)                # enables authenticated model download
-# -----------------------------------------------------------------
+    login(token=hf_token)
 
 # Cached model/tokenizer
 model = None
@@ -91,11 +90,16 @@ def correct_text():
         from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
         import torch
 
-        # Lazy‑load the grammar‑corrector once.
         if model is None or tokenizer is None:
             model_name = "prithivida/grammar_error_correcter_v1"
-            tokenizer = AutoTokenizer.from_pretrained(model_name)
-            model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+            tokenizer = AutoTokenizer.from_pretrained(
+                model_name,
+                use_auth_token=hf_token  # ✅ pass token here
+            )
+            model = AutoModelForSeq2SeqLM.from_pretrained(
+                model_name,
+                use_auth_token=hf_token  # ✅ pass token here
+            )
 
         data = request.get_json()
         if not data or 'text' not in data:
@@ -130,6 +134,12 @@ def spellcheck_word():
         return jsonify({"suggestions": suggestions})
     except Exception:
         return jsonify({"error": "Internal server error"}), 500
+
+
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host='0.0.0.0', port=port)
+
 
 
 
