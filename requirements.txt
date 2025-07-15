@@ -1,6 +1,6 @@
 flask==2.3.2
-transformers==4.21.1
-torch==2.2.0
+transformers==4.11.3
+torch==1.9.1
 pyspellchecker==0.7.0
 flask-cors==4.0.0
-tokenizers==0.12.1
+tokenizers==0.10.3
