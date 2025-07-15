@@ -1,7 +1,9 @@
-numpy==1.26.4          # pin <2.0 to avoid binary‑wheel issues
-torch==1.13.1+cpu      # lighter CPU build (or keep 2.x if you need)
-transformers==4.38.2   # recent, still small enough
+# ✅ WORKING VERSIONS (tested on Railway)
+numpy==1.26.4
+torch==1.13.1
+transformers==4.38.2
 huggingface_hub==0.24.1
 flask==2.3.2
 flask-cors==4.0.0
 pyspellchecker==0.7.0
+
